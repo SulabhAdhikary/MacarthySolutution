@@ -1,0 +1,150 @@
+﻿@using McCarthyMeasurementViewDomain
+
+@model MeasurementParameterAndValueViewDomain
+@{
+    ViewBag.Title = "Home Page";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+}
+
+<table id="tblMeasurmentData" class="table" cellpadding="0" cellspacing="0">
+    <tr>
+        <th style="width:50px"></th>
+        @foreach (StyleGroupMeasurementParameterViewDomain style in Model.StyleMeasurementParametre)
+        {
+            <th style="width:100px">@style.sgmp_name  </th>
+        }
+        <th style="width:150px"></th>
+    </tr>
+    @foreach (var kvp in Model.MeasurementAndData)
+    {
+        <tr>
+            <td class="measurementkey">
+                <span>@kvp.Key</span>
+            </td>
+
+            @foreach (MeasurementSizeViewDomain measurements in kvp.Value)
+            {
+                var cellClassName = "cellcss-" + measurements.sizeId.ToString().Trim() + "-" +measurements.sgmpId.ToString().Trim();
+            <td class="@cellClassName">
+                <span>@measurements.measurement</span>
+                <input type="text" value="@measurements.measurement" style="display:none" />
+                <div class='validation' style='color:red;display:none'><center>Please enter valid data</center></div>
+            </td>
+            }
+
+            <td>
+                <a class="Edit" href="javascript:;">Edit</a>
+                <a class="Update" href="javascript:;" style="display:none">Update</a>
+                <a class="Cancel" href="javascript:;" style="display:none">Cancel</a>
+            </td>
+        </tr>
+    }
+</table>
+@section scripts {
+    <script>
+        $(function () {
+         
+        });
+
+        var inputDataForCancel = [];
+
+        $("body").on("click", "#tblMeasurmentData .Edit", function () {
+            var row = $(this).closest("tr");
+            $("td", row).each(function () {
+                if ($(this).find("input").length > 0) {
+                    $(this).find("input").show();
+                    $(this).find("span").hide();
+                }
+            });
+            row.find(".Update").show();
+            row.find(".Cancel").show();           
+            $(this).hide();
+        });
+
+
+        $("body").on("click", "#tblMeasurmentData .Cancel", function () {
+            var row = $(this).closest("tr");
+            $("td", row).each(function () {
+                if ($(this).find("input").length > 0) {
+                    var span = $(this).find("span");
+                    var input = $(this).find("input");
+                    input.val(span.html());
+                    span.show();
+                    input.hide();
+                }
+            });
+            row.find(".Edit").show();            
+            row.find(".Update").hide();
+            $(this).hide();
+        });
+
+
+        
+        $("body").on("click", "#tblMeasurmentData .Update", function () {
+
+            var measurementSizePostViewDomain = {};
+            measurementSizePostViewDomain.styleId = '@Model.StyleId';
+            measurementSizePostViewDomain.groupId = '@Model.GroupId';
+            measurementSizePostViewDomain.viewMode = '@Model.viewMode';
+            var measurementData = [];
+            var isFormValid = true;
+            var row = $(this).closest("tr");
+            $("td", row).each(function () {
+
+                if (this.className.indexOf("cellcss") >= 0) {
+                    var dataInfo = this.className.split("-");
+                    var sizeAndStyleInfo = {};
+                    sizeAndStyleInfo.sizeId = dataInfo[1];
+                    sizeAndStyleInfo.sgmpId = dataInfo[2];
+                    if ($(this).find("input").length > 0) {
+                        var span = $(this).find("span");
+                        var input = $(this).find("input");
+                        var inputValue = input.val();
+                        //var regex = '(\s*|\d+)(([ ][0-9]\/[0-9])+|([ ]|\d)$)'
+                        var regex = '.*'
+                        var regexMatch = RegExp(regex);
+                        var matched = regexMatch.test(inputValue)
+                        if (inputValue!= '' &&  !matched) {
+                            $(this).find(".validation").show();
+                            isFormValid = false
+                            return isFormValid;
+                        } else {
+                            $(this).find(".validation").hide();
+                            sizeAndStyleInfo.measurement = inputValue;
+                        }
+                        span.html(input.val());
+                        span.show();
+                        input.hide();
+                    }
+                    measurementData.push(sizeAndStyleInfo);
+                }
+            });
+            measurementSizePostViewDomain.measurementData = measurementData;
+
+            if (isFormValid) {
+                row.find(".Edit").show();
+                row.find(".Delete").show();
+                row.find(".Cancel").hide();
+                $(this).hide();
+            }
+            /*
+            var customer = {};
+            customer.CustomerId = row.find(".CustomerId").find("span").html();
+            customer.Name = row.find(".Name").find("span").html();
+            customer.Country = row.find(".Country").find("span").html();
+            */
+            $.ajax({
+                type: "POST",
+                url: "/Home/SaveMeasument",
+                data: JSON.stringify(measurementSizePostViewDomain) ,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json"
+            });
+        });
+
+    </script>
+ }
+
+
+
